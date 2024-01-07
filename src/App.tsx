@@ -1,40 +1,96 @@
 import './App.css';
-import { read, utils, WorkBook, WorkSheet } from 'xlsx';
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useRef, useState } from 'react';
+import * as ExcelJS from 'exceljs';
 
-interface MyData {
-  rollNo: string;
-  roomNo: string;
-  hostel: string;
+interface IEnrollStudents {
+  id : string
+  name : string
+  role : number
 }
+
+interface IUpdateHostels {
+  id : string,
+  hostel : string,
+  roomNumber : string
+}
+
+
+function fileHandlerForEnrollment(workbook: ExcelJS.Workbook) {
+      let res:Array<IEnrollStudents> = []
+      let name : string = ""
+      let id : string = ""
+
+      const worksheet = workbook.worksheets[0];
+      worksheet.eachRow({ includeEmpty: false }, (row:any, rowNumber:any) => {
+
+      row.eachCell({ includeEmpty: true }, (cell:any, colNumber:any) => {
+        if (colNumber === 1) {
+           name = cell.value as string;
+        } else {
+          id = cell.value as string;
+        }
+      });
+
+      let obj: IEnrollStudents = {
+        id : id?.toLowerCase(),
+        name : name,
+        role: 0
+      }
+
+      res.push(obj)
+    });
+
+    //API Call 
+    console.log(res);
+}
+
+
+function fileHandlerForHostelUpdate(workbook: ExcelJS.Workbook) {
+      let res:Array<IUpdateHostels> = []
+      let id : string = ""
+      let roomNumber : string = ""
+      let hostel : string = ""
+
+      const worksheet = workbook.worksheets[0];
+      worksheet.eachRow({ includeEmpty: false }, (row:any, rowNumber:any) => {
+
+      row.eachCell({ includeEmpty: true }, (cell:any, colNumber:any) => {
+        if (colNumber === 1) {
+           id = cell.value as string;
+        } else if(colNumber === 2){
+          hostel = cell.value as string;
+        }else{
+          roomNumber = cell.value as string;
+        }
+      });
+
+      let obj: IUpdateHostels = {
+        id : id?.toLowerCase(),
+        hostel ,
+        roomNumber
+      }
+
+      res.push(obj)
+    });
+
+    //API Call 
+    console.log(res);
+}
+
 
 function App() {
   const [file, setFile] = useState<File | undefined>(undefined);
+  const fileInputRef=useRef<HTMLInputElement>(null);
 
   const handleFileUpload=async()=>{
     if (file) {
+
       const data: ArrayBuffer = await file.arrayBuffer();
-      const workbook: WorkBook = read(data);
-      const worksheet: WorkSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonExcelData = utils.sheet_to_json(worksheet);
-      console.log(jsonExcelData);
-      let RESULT:MyData[]=[];
-      let rollNoArray:string[]=[];
-      jsonExcelData.map((item:any)=>{
-        if(/^[A-Z]{3}\d{3}$/.test(item["Room No"]) && /^\d{4}[A-Z]{3}\d{4}$/.test(item["Roll No"]) && !rollNoArray.includes(item["Roll No"])){
-          rollNoArray.push(item["Roll No"]);
-          RESULT.push({
-             rollNo:item["Roll No"],
-             roomNo:item["Room No"],
-             hostel:item["Hostel"]
-          });
-        }else{
-          console.log('Invalid entry')
-        }
-      });
-      console.log("Final result");
-      //This can be sent to backend
-      console.log(RESULT);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(data)
+      // fileHandlerForEnrollment(workbook)
+      fileHandlerForHostelUpdate(workbook)
+
     }else{
       console.log('No file selected')
     }
@@ -49,14 +105,28 @@ function App() {
      }
     
   }
+  const handleCancel = () => {
+    // Reset the file selection
+    setFile(undefined);
+
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
   return (
     <div className="App">
       <input type="file"
+      ref={fileInputRef}
             style={{ padding: '8px',margin :'100px', borderRadius: '4px', border: '1px solid #ccc' }}
             onChange={(e) => handleFileSelection(e)} />
             <button
+            onClick={handleCancel}
+             style={{ cursor:'pointer',padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+             >Cancel</button>
+            <button
             onClick={handleFileUpload}
-             style={{ cursor:'pointer',padding: '8px',margin :'100px', borderRadius: '4px', border: '1px solid #ccc' }}
+             style={{ cursor:'pointer',padding: '8px',margin :'10px', borderRadius: '4px', border: '1px solid #ccc' }}
              >Submit</button>
     </div>
   );
