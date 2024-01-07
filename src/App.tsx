@@ -1,6 +1,6 @@
 import './App.css';
 import { read, utils, WorkBook, WorkSheet } from 'xlsx';
-import { ChangeEvent } from 'react';
+import { ChangeEvent, useState } from 'react';
 
 interface MyData {
   rollNo: string;
@@ -9,9 +9,9 @@ interface MyData {
 }
 
 function App() {
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file: File | null = e.target.files?.[0] || null;
+  const [file, setFile] = useState<File | undefined>(undefined);
 
+  const handleFileUpload=async()=>{
     if (file) {
       const data: ArrayBuffer = await file.arrayBuffer();
       const workbook: WorkBook = read(data);
@@ -33,14 +33,31 @@ function App() {
         }
       });
       console.log("Final result");
+      //This can be sent to backend
       console.log(RESULT);
+    }else{
+      console.log('No file selected')
     }
+  }
+  const handleFileSelection = async (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile: File | null = e.target.files?.[0] || null;
+    //Validation for the file that the selected file is of excel.
+     if(selectedFile && selectedFile.name.split('.')[1].includes('xl')){
+      setFile(selectedFile);
+     }else{
+      console.log('Please select a valid excel file');
+     }
+    
   }
   return (
     <div className="App">
       <input type="file"
             style={{ padding: '8px',margin :'100px', borderRadius: '4px', border: '1px solid #ccc' }}
-            onChange={(e) => handleFileUpload(e)} />
+            onChange={(e) => handleFileSelection(e)} />
+            <button
+            onClick={handleFileUpload}
+             style={{ cursor:'pointer',padding: '8px',margin :'100px', borderRadius: '4px', border: '1px solid #ccc' }}
+             >Submit</button>
     </div>
   );
 }
